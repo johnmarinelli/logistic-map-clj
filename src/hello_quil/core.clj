@@ -12,7 +12,7 @@
                               {begin 1.0 
                                end 4.0 
                                inc-amt 0.01 
-                               itrs-per-lmap 1000}}]
+                               itrs-per-lmap 10000}}]
   (let [rs (range begin end inc-amt)]
     (apply hash-map
            (->> rs
@@ -29,9 +29,9 @@
         itrs 10
         lmap (if (< r max-r) (logistic-map r itrs) [])]
    (doseq [x lmap]
-     (let [scaledx (* x 100)
+     (let [scaledx (* x q/height)
            invertedx (- (q/height) scaledx)
-           scaledr (* r 100)]
+           scaledr (* r q/width)]
        (q/point scaledr invertedx)))))
 
 ; draws bifurcation diagram one step at a time, keeping previous steps
@@ -39,17 +39,20 @@
   (let [frame-count (q/frame-count)
         r-inc-amt (/ frame-count 100.0) ; => r moves in 0.01s
         max-r 4.0
-        r (+ 1.0 r-inc-amt)
-        rg (range 1.0 r 0.01)
+        min-r 1.0
+        rend (+ min-r r-inc-amt)
+        rg (range min-r rend 0.01)
         lmaps (select-keys bd rg)]
     (doseq [lmap lmaps]
       (let [r (first lmap)
-            xs (second lmap)]
+            xs (second lmap)
+            scaledr (let [diff (- max-r min-r)
+                          pct (/ (- r min-r) diff)]
+                      (* pct (q/width)))]
        (doseq [x xs] 
-         (let [scaledx (* x 100)
-               invertedx (- (q/height) scaledx)
-               scaledr (* r 100)]
-           (q/point scaledr scaledx)))))))
+         (let [scaledx (* x (q/height))
+               invertedx (- (q/height) scaledx)]
+           (q/point scaledr invertedx)))))))
 
 (defn setup []
   ;set fps to 30
