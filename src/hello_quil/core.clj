@@ -7,26 +7,22 @@
   (let [x0 (rand)]
     (take (inc itr) (iterate #(* r % (- 1.0 %)) x0))))
 
-;(def lmap (logistic-map 4.0 10000))
-; since input (x) to a logistic map is just xn-1, 
-; our xs will just be lmap[0:len(lmap)-2]
-; and our ys will be lmap[1:len(lmap)-1]
-;(def lmap-xs (drop-last lmap))
-;(def lmap-ys (rest lmap))
-;(def coords (partition 2 (interleave lmap-xs lmap-ys)))
-;(def world-coords (map #(apply (partial * 100) %) coords))
-;
-(defn bifurcation-diagram []
-  (let [rs (range 1 4 0.01)
-        result-map {}
-        itrs 5]
-    (into {}
-          (for [r rs]
-            (assoc result-map r (set (logistic-map r itrs)))))))
+(defn bifurcation-diagram [& {:keys [begin end inc-amt itrs-per-lmap] 
+                              :or 
+                              {begin 1.0 
+                               end 4.0 
+                               inc-amt 0.01 
+                               itrs-per-lmap 1000}}]
+  (let [rs (range begin end inc-amt)]
+    (apply hash-map
+           (->> rs
+                (map (fn [r] (set (logistic-map r itrs-per-lmap))))
+                (interleave rs)))))
 
 (def bd (bifurcation-diagram))
 
-(defn draw-plot []
+; draws bifurcation diagram one step at a time, clearing previous steps
+(defn draw-plot-1 []
   (let [r-inc-amt (/ (q/frame-count) 100.0)
         max-r 4.0
         r (+ 1.0 r-inc-amt)
@@ -37,6 +33,23 @@
            invertedx (- (q/height) scaledx)
            scaledr (* r 100)]
        (q/point scaledr invertedx)))))
+
+; draws bifurcation diagram one step at a time, keeping previous steps
+(defn draw-plot-2 []
+  (let [frame-count (q/frame-count)
+        r-inc-amt (/ frame-count 100.0) ; => r moves in 0.01s
+        max-r 4.0
+        r (+ 1.0 r-inc-amt)
+        rg (range 1.0 r 0.01)
+        lmaps (select-keys bd rg)]
+    (doseq [lmap lmaps]
+      (let [r (first lmap)
+            xs (second lmap)]
+       (doseq [x xs] 
+         (let [scaledx (* x 100)
+               invertedx (- (q/height) scaledx)
+               scaledr (* r 100)]
+           (q/point scaledr scaledx)))))))
 
 (defn setup []
   ;set fps to 30
@@ -55,7 +68,7 @@
   (q/background 180)
   ; set color
   (q/fill (:color state) 255 255)
-  (draw-plot))
+  (draw-plot-2))
 
 (q/defsketch hello-quil
   :title "You spin my circle right round"
